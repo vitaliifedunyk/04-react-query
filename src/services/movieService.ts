@@ -3,6 +3,7 @@ import type { Movie } from '../types/movie';
 
 interface MoviesResponse {
   results: Movie[];
+  total_pages: number;
 }
 
 const BASE_URL = 'https://api.themoviedb.org/3/search/movie';

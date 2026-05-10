@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import SearchBar from '../SearchBar/SearchBar';
 import MovieGrid from '../MovieGrid/MovieGrid';
@@ -8,33 +8,35 @@ import MovieModal from '../MovieModal/MovieModal';
 import fetchMovies from '../../services/movieService';
 import type { Movie } from '../../types/movie';
 import css from './App.module.css';
+import { useQuery } from '@tanstack/react-query';
 
 function App() {
-  const [movies, setMovies] = useState<Movie[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isError, setIsError] = useState(false);
+  // const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleSearch = async (query: string) => {
-    try {
-      setMovies([]);
-      setSelectedMovie(null);
-      setIsError(false);
-      setIsLoading(true);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['Movies', searchQuery],
+    queryFn: () => fetchMovies(searchQuery),
+    enabled: searchQuery !== '',
+  });
 
-      const data = await fetchMovies(query);
-
-      if (data.length === 0) {
-        toast.error('No movies found for your request.');
-      }
-
-      setMovies(data);
-    } catch {
-      setIsError(true);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSearch = (query: string) => {
+    setSelectedMovie(null);
+    setSearchQuery(query);
   };
+
+  useEffect(() => {
+    if (
+      data &&
+      data.length === 0 &&
+      !isLoading &&
+      !isError &&
+      searchQuery !== ''
+    ) {
+      toast.error('No movies found for your request.');
+    }
+  }, [searchQuery, isLoading, isError, data]);
 
   const handleSelectMovie = (movie: Movie) => {
     setSelectedMovie(movie);
@@ -52,15 +54,15 @@ function App() {
 
       {isError && <ErrorMessage />}
 
-      {!isLoading && !isError && movies.length > 0 && (
-        <MovieGrid movies={movies} onSelect={handleSelectMovie} />
+      {data && data.length > 0 && (
+        <MovieGrid movies={data} onSelect={handleSelectMovie} />
       )}
 
       {selectedMovie && (
         <MovieModal movie={selectedMovie} onClose={handleCloseModal} />
       )}
 
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
     </div>
   );
 }
